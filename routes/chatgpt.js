@@ -4,16 +4,17 @@ const { OpenAI } = require('openai');
 const Auditorio = require('../models/Auditorio');
 require('dotenv').config();
 
-// Verifica que la API Key esté configurada
+// Verifica que la clave API esté definida
 if (!process.env.OPENAI_API_KEY) {
-  console.error('❌ La clave de API de OpenAI no está configurada en el entorno.');
-  process.exit(1);  // Termina el proceso si no hay clave API
+  console.error('❌ Falta la clave API de OpenAI en el entorno');
+  process.exit(1);
 }
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+// Ruta POST para consultas a ChatGPT
 router.post('/', async (req, res) => {
   const { pregunta } = req.body;
 
@@ -24,13 +25,11 @@ router.post('/', async (req, res) => {
   try {
     const auditorios = await Auditorio.find();
 
-    // Filtra solo lo necesario
     const resumen = auditorios.map(a => ({
       nombre: a.nombre,
       tipo_tablero: a.tipo_tablero
     }));
 
-    // Verifica si la pregunta está relacionada con tipos de tablero
     const preguntaMin = pregunta.toLowerCase();
     const esPreguntaSobreTipos = preguntaMin.includes('tablero') || preguntaMin.includes('tipos');
 
@@ -48,21 +47,26 @@ Responde a la siguiente pregunta con claridad:
 ${pregunta}`;
 
     const chatResponse = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
       messages: [
-        { role: 'system', content: 'Eres un asistente experto en características de auditorios. Responde con precisión usando solo los datos proporcionados.' },
-        { role: 'user', content: prompt }
-      ],
-      model: 'gpt-3.5-turbo'
+        {
+          role: 'system',
+          content: 'Eres un asistente experto en auditorios. Responde con precisión usando solo los datos proporcionados.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
     });
 
     const respuesta = chatResponse.choices[0].message.content;
     res.json({ respuesta });
 
   } catch (error) {
-    console.error("❌ Error con ChatGPT:", error.message);
+    console.error('❌ Error al consultar ChatGPT:', error.message);
     res.status(500).json({ error: 'Error al consultar ChatGPT' });
   }
 });
 
 module.exports = router;
-
