@@ -4,6 +4,12 @@ const { OpenAI } = require('openai');
 const Auditorio = require('../models/Auditorio');
 require('dotenv').config();
 
+// Verifica que la API Key esté configurada
+if (!process.env.OPENAI_API_KEY) {
+  console.error('❌ La clave de API de OpenAI no está configurada en el entorno.');
+  process.exit(1);  // Termina el proceso si no hay clave API
+}
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
@@ -11,16 +17,20 @@ const openai = new OpenAI({
 router.post('/', async (req, res) => {
   const { pregunta } = req.body;
 
+  if (!pregunta) {
+    return res.status(400).json({ error: 'La pregunta es requerida.' });
+  }
+
   try {
     const auditorios = await Auditorio.find();
 
-    // Captura solo lo necesario
+    // Filtra solo lo necesario
     const resumen = auditorios.map(a => ({
       nombre: a.nombre,
       tipo_tablero: a.tipo_tablero
     }));
 
-    // Detectar si la pregunta busca comparar o listar
+    // Verifica si la pregunta está relacionada con tipos de tablero
     const preguntaMin = pregunta.toLowerCase();
     const esPreguntaSobreTipos = preguntaMin.includes('tablero') || preguntaMin.includes('tipos');
 
@@ -55,3 +65,4 @@ ${pregunta}`;
 });
 
 module.exports = router;
+
